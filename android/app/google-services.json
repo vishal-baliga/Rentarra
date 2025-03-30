@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "619834203559",
+    "project_id": "rentarra-83520",
+    "storage_bucket": "rentarra-83520.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:619834203559:android:275efd652c74ee652e2a82",
+        "android_client_info": {
+          "package_name": "com.example.rentarra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF4aHioRUBK9fKM-SJK-9wdSuYP2WowVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

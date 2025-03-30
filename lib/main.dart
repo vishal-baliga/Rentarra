@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'firebase_options.dart'; // 👈 Auto-generated from flutterfire configure
+
 import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'dashboards.dart';
@@ -13,14 +15,7 @@ import 'renter_onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: FirebaseOptions(
-      apiKey: "AIzaSyDaDJMu04a-ItnaEFCbwIjbVfy0pyzkzAI",
-      authDomain: "rentarra-83520.firebaseapp.com",
-      projectId: "rentarra-83520",
-      storageBucket: "rentarra-83520.appspot.com",
-      messagingSenderId: "619834203559",
-      appId: "1:619834203559:web:be57433626573d8d2e2a82",
-    ),
+    options: DefaultFirebaseOptions.currentPlatform, // 👈 Secure, platform-aware
   );
   runApp(const MyApp());
 }
@@ -33,12 +28,15 @@ class MyApp extends StatelessWidget {
 
     if (user == null) return const LoginScreen();
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final doc = await docRef.get();
+
+    // Safeguard: if user doc doesn't exist, treat as new
+    if (!doc.exists) return const LoginScreen();
+
     final role = doc.data()?['role'] ?? 'renter';
 
-    if (role == 'landlord') {
-      return const LandlordDashboard();
-    }
+    if (role == 'landlord') return const LandlordDashboard();
 
     final prefs = await SharedPreferences.getInstance();
     final onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
@@ -55,11 +53,13 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: FutureBuilder(
+      home: FutureBuilder<Widget>(
         future: _getStartScreen(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
           return snapshot.data ?? const LoginScreen();
         },

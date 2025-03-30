@@ -1,14 +1,13 @@
-// renter_onboarding_screen.dart
-// This is a simplified version — ask me if you want the full version again or copy-paste fixes
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart'; // For placemarkFromCoordinates
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'package:flutter_haptic_feedback/flutter_haptic_feedback.dart';
+import 'package:flutter/services.dart';
+
 
 class RenterOnboardingScreen extends StatefulWidget {
   const RenterOnboardingScreen({super.key});
@@ -22,7 +21,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   int _currentStep = 0;
 
   final _cityController = TextEditingController();
-  final _places = GoogleMapsPlaces(apiKey: 'YOUR_GOOGLE_API_KEY');
+  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4EY'); // Replace this!
   List<Prediction> _locationSuggestions = [];
 
   final _bedroomController = TextEditingController();
@@ -88,7 +87,6 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
         ),
         showBack: true,
       ),
-      // Continue adding more steps like this (commute, budget, date, lease, petType, income, vibes, preferences)
     ];
   }
 
@@ -101,7 +99,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
 
   void _getCurrentLocation() async {
     final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    final placemarks = await Geolocator.placemarkFromCoordinates(position.latitude, position.longitude);
+    final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     if (placemarks.isNotEmpty) {
       final p = placemarks.first;
       setState(() {
@@ -156,14 +154,14 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
               children: [
                 TextButton(
                   onPressed: () {
-                    FlutterHapticFeedback.lightImpact();
+                    HapticFeedback.lightImpact();
                     _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
                   },
                   child: const Text('Skip →'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    FlutterHapticFeedback.mediumImpact();
+                    HapticFeedback.mediumImpact();
                     _nextStep();
                   },
                   child: const Text('Next'),
@@ -211,7 +209,8 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
       'vibe': _selectedVibes
     });
 
-    Navigator.pushNamed(context, '/signup');
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override
@@ -251,3 +250,4 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
     );
   }
 }
+
