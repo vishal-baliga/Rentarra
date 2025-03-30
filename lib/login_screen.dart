@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _emailExists = false;
   bool _checkingEmail = false;
   String? _error;
-  String? _userId;
 
   Future<void> _checkEmailExists() async {
     setState(() {
@@ -37,11 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
           .get();
 
       if (query.docs.isNotEmpty) {
-        _userId = query.docs.first.id;
         setState(() {
           _emailExists = true;
         });
       } else {
+        // New user → redirect to SignUp
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -70,24 +69,28 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      // Sign in using email/password
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      // Fetch role using currentUser's email
+      final user = _auth.currentUser;
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
-          .doc(_userId)
+          .where('email', isEqualTo: user?.email)
+          .limit(1)
           .get();
 
-      if (!snapshot.exists) {
+      if (snapshot.docs.isEmpty) {
         setState(() {
           _error = "User record not found.";
         });
         return;
       }
 
-      final role = snapshot.data()?['role']?.toLowerCase();
+      final role = snapshot.docs.first.data()['role']?.toLowerCase();
 
       if (role == 'renter') {
         Navigator.pushReplacement(
@@ -118,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(), // 👈 dismiss keyboard
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Rentarra Login')),
         body: SingleChildScrollView(
@@ -131,6 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
               ),
+              const SizedBox(height: 8),
               if (_emailExists)
                 TextField(
                   controller: _passwordController,

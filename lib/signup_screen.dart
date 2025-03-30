@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'dashboards.dart';
+import 'renter_onboarding_screen.dart'; // 👈 Import your onboarding screen
 
 class SignUpScreen extends StatefulWidget {
   final String? prefilledEmail;
@@ -38,36 +39,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      // Firebase Auth
+      // Create Firebase Auth user
       final credential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Firestore user doc
+      // Save user in Firestore
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'role': _role,
         'createdAt': FieldValue.serverTimestamp(),
-        'onboardingComplete': false, // optional flag for renters
+        'onboardingComplete': false,
       });
 
-      // Toast
+      // Show success toast
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up successful ✅")),
       );
 
-      // Navigate
-      final destination = _role.toLowerCase() == 'renter'
-          ? const RenterDashboard()
-          : const LandlordDashboard();
+      // Navigate based on role
+      final roleLower = _role.toLowerCase();
+      Widget nextScreen;
+
+      if (roleLower == 'renter') {
+        nextScreen = const RenterOnboardingScreen(); // 👈 go to onboarding first
+      } else {
+        nextScreen = const LandlordDashboard();
+      }
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => destination),
+        MaterialPageRoute(builder: (_) => nextScreen),
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -83,7 +89,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(), // 👈 dismiss keyboard
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Rentarra Sign Up')),
         body: SingleChildScrollView(

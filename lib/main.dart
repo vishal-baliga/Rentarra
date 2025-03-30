@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'firebase_options.dart'; // 👈 Auto-generated from flutterfire configure
+import 'firebase_options.dart';
 
 import 'login_screen.dart';
 import 'signup_screen.dart';
@@ -15,7 +15,7 @@ import 'renter_onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // 👈 Secure, platform-aware
+    options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(const MyApp());
 }
@@ -24,24 +24,35 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   Future<Widget> _getStartScreen() async {
-    final user = FirebaseAuth.instance.currentUser;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return const LoginScreen();
 
-    if (user == null) return const LoginScreen();
+      final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final doc = await docRef.get();
 
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final doc = await docRef.get();
+      // If no Firestore user doc exists, treat as new user
+      if (!doc.exists) return const LoginScreen();
 
-    // Safeguard: if user doc doesn't exist, treat as new
-    if (!doc.exists) return const LoginScreen();
+      final role = doc.data()?['role']?.toLowerCase() ?? 'renter';
 
-    final role = doc.data()?['role'] ?? 'renter';
+      if (role == 'landlord') {
+        return const LandlordDashboard();
+      }
 
-    if (role == 'landlord') return const LandlordDashboard();
+      // Check onboarding flag from SharedPreferences AND Firestore
+      final prefs = await SharedPreferences.getInstance();
+      final localFlag = prefs.getBool('onboardingComplete');
+      final firestoreFlag = doc.data()?['onboardingComplete'] ?? false;
+      final onboardingComplete = localFlag ?? firestoreFlag;
 
-    final prefs = await SharedPreferences.getInstance();
-    final onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
-
-    return onboardingComplete ? const RenterDashboard() : const RenterOnboardingScreen();
+      return onboardingComplete
+          ? const RenterDashboard()
+          : const RenterOnboardingScreen();
+    } catch (e) {
+      // Fallback to login on error
+      return const LoginScreen();
+    }
   }
 
   @override
@@ -50,7 +61,7 @@ class MyApp extends StatelessWidget {
       title: 'Rentarra',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
       home: FutureBuilder<Widget>(

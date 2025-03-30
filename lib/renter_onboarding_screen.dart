@@ -4,10 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart'; // For placemarkFromCoordinates
+import 'package:geocoding/geocoding.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'package:flutter/services.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RenterOnboardingScreen extends StatefulWidget {
   const RenterOnboardingScreen({super.key});
@@ -21,7 +20,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   int _currentStep = 0;
 
   final _cityController = TextEditingController();
-  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4EY'); // Replace this!
+  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4EY');
   List<Prediction> _locationSuggestions = [];
 
   final _bedroomController = TextEditingController();
@@ -193,6 +192,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
     await prefs.setBool('onboardingComplete', true);
 
     await FirebaseFirestore.instance.collection('renterOnboarding').add({
+      'userID': FirebaseAuth.instance.currentUser!.uid,
       'city': _cityController.text.trim(),
       'bedrooms': int.tryParse(_bedroomController.text.trim()) ?? 1,
       'commute': {
@@ -200,13 +200,14 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
         'mode': _selectedMode
       },
       'budget': int.tryParse(_budgetController.text.trim()) ?? 0,
-      'moveInDate': _moveInDate?.toIso8601String(),
+      'moveInDate': _moveInDate != null ? Timestamp.fromDate(_moveInDate!) : null,
       'dateImportance': _dateImportance,
       'leaseLength': _leaseLength,
       'pets': _petType,
       'preferences': _selectedPreferences,
       'householdIncome': int.tryParse(_incomeController.text.trim()) ?? 0,
-      'vibe': _selectedVibes
+      'vibe': _selectedVibes,
+      'submittedAt': FieldValue.serverTimestamp(),
     });
 
     if (!mounted) return;
@@ -250,4 +251,3 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
     );
   }
 }
-
