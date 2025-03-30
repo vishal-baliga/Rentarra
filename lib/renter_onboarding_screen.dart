@@ -16,11 +16,11 @@ class RenterOnboardingScreen extends StatefulWidget {
 }
 
 class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
-  final _pageController = PageController();
+  late PageController _pageController;
   int _currentStep = 0;
 
   final _cityController = TextEditingController();
-  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4EY');
+  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4');
   List<Prediction> _locationSuggestions = [];
 
   final _bedroomController = TextEditingController();
@@ -39,11 +39,13 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   final _preferenceOptions = ['Commute', 'Natural Light', 'Quiet', 'Safety'];
   final _selectedPreferences = <String>[];
 
-  List<Widget> _steps = [];
+  late List<Widget> _steps;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
+
     _steps = [
       _buildStep(
         icon: Icons.location_on,
@@ -64,14 +66,14 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
               ),
             ),
             ..._locationSuggestions.map((p) => ListTile(
-              title: Text(p.description ?? ''),
-              onTap: () {
-                setState(() {
-                  _cityController.text = p.description ?? '';
-                  _locationSuggestions = [];
-                });
-              },
-            )),
+                  title: Text(p.description ?? ''),
+                  onTap: () {
+                    setState(() {
+                      _cityController.text = p.description ?? '';
+                      _locationSuggestions = [];
+                    });
+                  },
+                )),
           ],
         ),
       ),
@@ -154,7 +156,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
                 TextButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                    _nextStep();
                   },
                   child: const Text('Skip →'),
                 ),
@@ -215,6 +217,12 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -225,6 +233,11 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentStep = index;
+                  });
+                },
                 children: _steps,
               ),
             ),

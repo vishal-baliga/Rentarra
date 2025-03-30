@@ -1,4 +1,3 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
-
 import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'dashboards.dart';
@@ -23,34 +21,46 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  /// Determines the initial screen based on login, role, and onboarding status.
   Future<Widget> _getStartScreen() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return const LoginScreen();
+      if (user == null) {
+        print('🔐 No user logged in → LoginScreen');
+        return const LoginScreen();
+      }
 
       final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final doc = await docRef.get();
 
-      // If no Firestore user doc exists, treat as new user
-      if (!doc.exists) return const LoginScreen();
+      if (!doc.exists) {
+        print('📄 No user doc in Firestore → LoginScreen');
+        return const LoginScreen();
+      }
 
-      final role = doc.data()?['role']?.toLowerCase() ?? 'renter';
+      final data = doc.data();
+      final role = data?['role']?.toString().toLowerCase() ?? 'renter';
+      final firestoreFlag = data?['onboardingComplete'] ?? false;
+
+      print('🔎 Logged in as $role | Firestore onboardingComplete: $firestoreFlag');
 
       if (role == 'landlord') {
         return const LandlordDashboard();
       }
 
-      // Check onboarding flag from SharedPreferences AND Firestore
+      // For renters → check onboarding status locally and remotely
       final prefs = await SharedPreferences.getInstance();
       final localFlag = prefs.getBool('onboardingComplete');
-      final firestoreFlag = doc.data()?['onboardingComplete'] ?? false;
       final onboardingComplete = localFlag ?? firestoreFlag;
+
+      print('🧠 Local onboardingComplete: $localFlag | Final: $onboardingComplete');
 
       return onboardingComplete
           ? const RenterDashboard()
           : const RenterOnboardingScreen();
+
     } catch (e) {
-      // Fallback to login on error
+      print('🔥 Error in _getStartScreen(): $e');
       return const LoginScreen();
     }
   }
