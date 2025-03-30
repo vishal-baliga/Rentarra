@@ -43,6 +43,20 @@
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to find properties near you.</string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to let you upload property images.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string></string>
+	<key>CFBundleIconFile</key>
+	<string></string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library for uploading images.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 </dict>
