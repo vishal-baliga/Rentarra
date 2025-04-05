@@ -47,6 +47,10 @@ app.*.map.json
 # Ignore everything in the project
 /*
 
+!/.github/
+!/.github/workflows/
+
+
 # Except these directories
 !/lib/
 !/ios/

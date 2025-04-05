@@ -209,31 +209,9 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
 
     final userId = FirebaseAuth.instance.currentUser!.uid;
 
-    await FirebaseFirestore.instance
-        .collection('renterOnboarding')
-        .doc(userId)
-        .set({
-          'userID': userId,
-          'city': _cityController.text.trim(),
-          'bedrooms': _safeInt(_bedroomController.text.trim(), fallback: 1),
-          'commute': {
-            'destination': _commuteController.text.trim(),
-            'mode': _selectedMode
-          },
-          'budget': _safeInt(_budgetController.text.trim()),
-          'moveInDate': _moveInDate != null ? Timestamp.fromDate(_moveInDate!) : null,
-          'dateImportance': _dateImportance,
-          'leaseLength': _leaseLength,
-          'pets': _petType,
-          'preferences': _selectedPreferences,
-          'householdIncome': _safeInt(_incomeController.text.trim()),
-          'vibe': _selectedVibes,
-          'submittedAt': FieldValue.serverTimestamp(),
-          'onboardingComplete': true,
-        }, SetOptions(merge: true));
-
+    // Move this data save logic to the sign-up screen after user signs up
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/dashboard');
+    Navigator.pushReplacementNamed(context, '/signup');  // Move to sign-up screen after onboarding.
   }
 
   @override
@@ -269,9 +247,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
                   const Text('Already signed up?'),
                   TextButton(
                     onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
-                      Navigator.pushNamed(context, onboardingComplete ? '/dashboard' : '/login');
+                      Navigator.pushNamed(context, '/login');
                     },
                     child: const Text('Log in'),
                   ),

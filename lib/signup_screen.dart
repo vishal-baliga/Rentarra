@@ -39,38 +39,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
+      // Create user with FirebaseAuth
       final credential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      // Create user document in Firestore
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'role': _role,
         'createdAt': FieldValue.serverTimestamp(),
-        'onboardingComplete': false,
+        'onboardingComplete': false, // Keep onboarding status false initially
       });
 
+      // Show success message
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up successful ✅")),
       );
 
-      final roleLower = _role.toLowerCase();
-      Widget nextScreen;
-
-      if (roleLower == 'renter') {
-        nextScreen = const RenterOnboardingScreen();
+      // Navigate to onboarding screen if Renter
+      if (_role.toLowerCase() == 'renter') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RenterOnboardingScreen()),
+        );
       } else {
-        nextScreen = const LandlordDashboard();
+        // Navigate to Landlord Dashboard for landlords
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LandlordDashboard()),
+        );
       }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => nextScreen),
-      );
     } on FirebaseAuthException catch (e) {
       setState(() {
         _error = e.message ?? "Something went wrong.";

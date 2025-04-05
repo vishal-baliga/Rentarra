@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'login_screen.dart';
 import 'renter_onboarding_screen.dart';
-import 'dashboards.dart';
+import 'dashboards.dart'; // Replace this with your actual Dashboard screen
 
 class SplashRouterScreen extends StatefulWidget {
   const SplashRouterScreen({super.key});
@@ -43,6 +43,7 @@ class _SplashRouterScreenState extends State<SplashRouterScreen> {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) {
+        // If user is not logged in, go to the Login Screen
         _goTo(const LoginScreen());
         return;
       }
@@ -55,20 +56,25 @@ class _SplashRouterScreenState extends State<SplashRouterScreen> {
       final role = userDoc.data()?['role']?.toString().toLowerCase() ?? 'renter';
       final firestoreFlag = userDoc.data()?['onboardingComplete'] ?? false;
 
+      // Shared preferences to check onboarding status
       final prefs = await SharedPreferences.getInstance();
       final localFlag = prefs.getBool('onboardingComplete');
       final onboardingComplete = localFlag ?? firestoreFlag;
 
       if (role == 'landlord') {
+        // If the user is a landlord, go to the Landlord Dashboard
         _goTo(const LandlordDashboard());
       } else if (onboardingComplete) {
+        // If onboarding is completed, go to the Renter Dashboard
         _goTo(const RenterDashboard());
       } else {
+        // If onboarding isn't completed, go to the Renter Onboarding Screen
         _goTo(const RenterOnboardingScreen());
       }
     } catch (e, stack) {
       print('🚨 Splash router error: $e');
       print(stack);
+      // In case of error, navigate to the Login Screen
       _goTo(const LoginScreen());
     }
   }

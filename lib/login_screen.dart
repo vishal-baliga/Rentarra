@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboards.dart';
 import 'signup_screen.dart';
+import 'renter_onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,33 +24,33 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _checkingEmail = false;
   String? _error;
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    print('👋 User signed out.');
-    setState(() {
-      _emailExists = false;
-      _emailController.clear();
-      _passwordController.clear();
-      _error = null;
-    });
-  }
-
-  Future<void> _resetOnboarding() async {
+  // Check if the user is already logged in
+  Future<void> _checkLoginStatus() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final role = userDoc.data()?['role']?.toString().toLowerCase() ?? 'renter';
+      final onboardingComplete = userDoc.data()?['onboardingComplete'] ?? false;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('onboardingComplete');
-    print('🧹 Cleared onboardingComplete from SharedPreferences');
-
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    await docRef.update({'onboardingComplete': false});
-    print('🔥 Set onboardingComplete to false in Firestore');
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Onboarding reset. Restart app to test.")),
-    );
+      if (role == 'renter') {
+        if (onboardingComplete) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RenterDashboard()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RenterOnboardingScreen()),
+          );
+        }
+      } else if (role == 'landlord') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LandlordDashboard()),
+        );
+      }
+    }
   }
 
   Future<void> _checkEmailExists() async {
@@ -68,13 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
           .get();
 
       if (query.docs.isNotEmpty) {
-        print('✅ Email found in Firestore');
         setState(() {
           _emailExists = true;
         });
       } else {
-        print('🚨 Email not found. Redirecting to SignUp');
-        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -85,7 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      print('❌ Error in _checkEmailExists: $e');
       setState(() {
         _error = "Something went wrong. Please try again.";
       });
@@ -97,8 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    print('🔐 Logging in...');
-
     setState(() {
       _loading = true;
       _error = null;
@@ -108,8 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      print('📧 Attempting login for: $email');
-
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -118,11 +111,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = userCredential.user;
       if (user == null) {
         setState(() => _error = "User not found after login.");
-        print('❌ User is null after sign in');
         return;
       }
-
-      print('✅ Firebase user logged in: ${user.uid} (${user.email})');
 
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -132,12 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (snapshot.docs.isEmpty) {
         setState(() => _error = "User record not found.");
-        print('🚨 No user record in Firestore for ${user.email}');
         return;
       }
 
       final role = snapshot.docs.first.data()['role']?.toLowerCase();
-      print('🔎 Role from Firestore: $role');
 
       if (role == 'renter') {
         final onboardingDoc = await FirebaseFirestore.instance
@@ -146,9 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
             .get();
 
         final onboardingComplete = onboardingDoc.data()?['onboardingComplete'] == true;
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('onboardingComplete', onboardingComplete);
 
         if (onboardingComplete) {
           Navigator.pushReplacement(
@@ -165,30 +150,30 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         setState(() => _error = "Unknown role assigned to this user.");
-        print('❌ Unknown role: $role');
       }
     } on FirebaseAuthException catch (e) {
-      print('❌ Firebase Auth Error: ${e.code} - ${e.message}');
       setState(() {
         _error = "Login failed: ${e.message}";
       });
     } catch (e) {
-      print('🔥 Unexpected error during login: $e');
       setState(() {
         _error = "Something went wrong. Please try again.";
       });
     } finally {
       setState(() {
         _loading = false;
-        print('✅ Login flow completed. Loading stopped.');
       });
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    print('📡 emailExists = $_emailExists');
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -198,32 +183,6 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (FirebaseAuth.instance.currentUser != null)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(onPressed: _logout, child: const Text('Logout')),
-                    TextButton(
-                      onPressed: _resetOnboarding,
-                      child: const Text('Reset Onboarding'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        await FirebaseAuth.instance.signOut();
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.remove('onboardingComplete');
-                        print('🚪 Dev Logout: signed out and cleared onboarding flag');
-                        setState(() {
-                          _emailController.clear();
-                          _passwordController.clear();
-                          _emailExists = false;
-                          _error = null;
-                        });
-                      },
-                      child: const Text('Dev Logout'),
-                    ),
-                  ],
-                ),
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
@@ -253,7 +212,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: (_checkingEmail || _loading)
                       ? null
                       : () {
-                          print('🟢 Continue button pressed');
                           if (_emailExists) {
                             _login();
                           } else {
