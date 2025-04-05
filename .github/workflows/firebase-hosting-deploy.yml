@@ -36,15 +36,13 @@ jobs:
       - name: 🛠️ Build Flutter Web
         run: flutter build web --release
 
-      - name: 🔥 Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}"
-          projectId: rentarra-83520
-          # Channel ID should be 'live' for main branch and 'staging' for staging branch
-          channelId: ${{ github.ref == 'refs/heads/main' && 'live' || 'staging' }}
-
+	- name: 🔥 Deploy to Firebase Hosting
+	 uses: FirebaseExtended/action-hosting-deploy@v0.9.0
+ 	 with: repoToken: "${{ secrets.GITHUB_TOKEN }}"
+   	 firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}"
+   	 projectId: rentarra-83520
+   	 channelId: ${{ github.ref == 'refs/heads/main' && 'live' || (github.ref == 'refs/heads/staging' && 'staging') || format('pr-{0}', github.event.pull_request.number) }}
+	
       - name: ✅ Post Deploy Info
         run: echo "🔥 Deployed to Firebase Hosting"
 
