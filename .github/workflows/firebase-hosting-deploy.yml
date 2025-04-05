@@ -6,17 +6,29 @@ on:
       - main
 
 jobs:
-  deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: 🔄 Checkout Repo
+      - name: 🔄 Checkout repository
         uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Match your local Flutter version
+
+      - name: 🧱 Install dependencies
+        run: flutter pub get
+
+      - name: 🛠️ Build Flutter web
+        run: flutter build web --release
 
       - name: 🔥 Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}"
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}'
           channelId: live
           projectId: rentarra-83520
 
