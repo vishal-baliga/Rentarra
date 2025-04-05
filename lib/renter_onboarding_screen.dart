@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +7,6 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class RenterOnboardingScreen extends StatefulWidget {
   const RenterOnboardingScreen({super.key});
@@ -20,7 +20,7 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   int _currentStep = 0;
 
   final _cityController = TextEditingController();
-  final _places = GoogleMapsPlaces(apiKey: 'AIzaSyAi2FoBGhuNMEd1pXwNynU8dJm3jdTlXB4');
+  final _places = GoogleMapsPlaces(apiKey: 'YOUR_API_KEY');  // Replace with your API key
   List<Prediction> _locationSuggestions = [];
 
   final _bedroomController = TextEditingController();
