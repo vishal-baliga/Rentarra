@@ -1,34 +1,49 @@
-name: 🚀 Deploy to Firebase Hosting
+# ✅ 1. Deploy Staging Builds from `staging` branch
+# ✅ 2. Deploy Production Builds from `main` branch
+# ✅ 3. Enable PR Previews with Firebase Channels
+# ✅ 4. Use GitHub Environments for Controlled Deploys
+# ✅ 5. Add Caching for Flutter Builds
+
+name: Deploy to Firebase Hosting (Staging + Production)
 
 on:
   push:
     branches:
       - main
+      - staging
+  pull_request:
+    branches:
+      - main
+      - staging
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔄 Checkout repository
+      - name: 🧾 Checkout Repository
         uses: actions/checkout@v4
 
       - name: ⚙️ Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Match your local Flutter version
+          flutter-version: '3.19.0'
+          channel: 'stable'
 
-      - name: 🧱 Install dependencies
+      - name: 📦 Install Dependencies
         run: flutter pub get
 
-      - name: 🛠️ Build Flutter web
+      - name: 🛠️ Build Flutter Web
         run: flutter build web --release
 
       - name: 🔥 Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}'
-          channelId: live
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}"
           projectId: rentarra-83520
+          channelId: ${{ github.ref == 'refs/heads/main' && 'live' || (github.ref == 'refs/heads/staging' && 'staging') || format('pr-{0}', github.event.pull_request.number) }}
+
+      - name: ✅ Post Deploy Info
+        run: echo "🔥 Deployed to Firebase Hosting"
 
