@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'dashboards.dart';
-import 'renter_onboarding_screen.dart'; // 👈 Import your onboarding screen
+import 'renter_onboarding_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   final String? prefilledEmail;
@@ -39,13 +39,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      // Create Firebase Auth user
       final credential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Save user in Firestore
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
@@ -55,18 +53,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'onboardingComplete': false,
       });
 
-      // Show success toast
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up successful ✅")),
       );
 
-      // Navigate based on role
       final roleLower = _role.toLowerCase();
       Widget nextScreen;
 
       if (roleLower == 'renter') {
-        nextScreen = const RenterOnboardingScreen(); // 👈 go to onboarding first
+        nextScreen = const RenterOnboardingScreen();
       } else {
         nextScreen = const LandlordDashboard();
       }

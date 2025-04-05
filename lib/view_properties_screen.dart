@@ -6,20 +6,22 @@ class ViewPropertiesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final propertiesStream = FirebaseFirestore.instance
+        .collection('properties')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+
     return Scaffold(
       appBar: AppBar(title: const Text("Listed Properties")),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('properties')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream: propertiesStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return const Center(child: Text("Something went wrong 😢"));
+            return Center(child: Text("Something went wrong 😢\n${snapshot.error}"));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -31,16 +33,16 @@ class ViewPropertiesScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: properties.length,
             itemBuilder: (context, index) {
-              final property = properties[index].data() as Map<String, dynamic>;
+              final data = properties[index].data() as Map<String, dynamic>;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
-                  leading: property['imageUrl'] != null
-                      ? Image.network(property['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
+                  leading: data['imageUrl'] != null
+                      ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
                       : const Icon(Icons.home, size: 40),
-                  title: Text(property['title'] ?? 'No Title'),
-                  subtitle: Text("${property['propertyType']} • ${property['rent']} USD/month"),
+                  title: Text(data['title'] ?? 'No Title'),
+                  subtitle: Text("${data['propertyType'] ?? 'Unknown'} • ${data['rent'] ?? '??'} USD/month"),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     // Optional: Navigate to detailed screen

@@ -99,6 +99,15 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
   }
 
   void _getCurrentLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever) {
+      print('Location permission permanently denied');
+      return;
+    }
+
     final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     if (placemarks.isNotEmpty) {
@@ -107,6 +116,11 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
         _cityController.text = '${p.locality}, ${p.administrativeArea}';
       });
     }
+  }
+
+  int _safeInt(String value, {int fallback = 0}) {
+    final n = int.tryParse(value.trim());
+    return (n == null || n.isNaN) ? fallback : n;
   }
 
   Widget _buildStep({
@@ -193,24 +207,30 @@ class _RenterOnboardingScreenState extends State<RenterOnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboardingComplete', true);
 
-    await FirebaseFirestore.instance.collection('renterOnboarding').add({
-      'userID': FirebaseAuth.instance.currentUser!.uid,
-      'city': _cityController.text.trim(),
-      'bedrooms': int.tryParse(_bedroomController.text.trim()) ?? 1,
-      'commute': {
-        'destination': _commuteController.text.trim(),
-        'mode': _selectedMode
-      },
-      'budget': int.tryParse(_budgetController.text.trim()) ?? 0,
-      'moveInDate': _moveInDate != null ? Timestamp.fromDate(_moveInDate!) : null,
-      'dateImportance': _dateImportance,
-      'leaseLength': _leaseLength,
-      'pets': _petType,
-      'preferences': _selectedPreferences,
-      'householdIncome': int.tryParse(_incomeController.text.trim()) ?? 0,
-      'vibe': _selectedVibes,
-      'submittedAt': FieldValue.serverTimestamp(),
-    });
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    await FirebaseFirestore.instance
+        .collection('renterOnboarding')
+        .doc(userId)
+        .set({
+          'userID': userId,
+          'city': _cityController.text.trim(),
+          'bedrooms': _safeInt(_bedroomController.text.trim(), fallback: 1),
+          'commute': {
+            'destination': _commuteController.text.trim(),
+            'mode': _selectedMode
+          },
+          'budget': _safeInt(_budgetController.text.trim()),
+          'moveInDate': _moveInDate != null ? Timestamp.fromDate(_moveInDate!) : null,
+          'dateImportance': _dateImportance,
+          'leaseLength': _leaseLength,
+          'pets': _petType,
+          'preferences': _selectedPreferences,
+          'householdIncome': _safeInt(_incomeController.text.trim()),
+          'vibe': _selectedVibes,
+          'submittedAt': FieldValue.serverTimestamp(),
+          'onboardingComplete': true,
+        }, SetOptions(merge: true));
 
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/dashboard');

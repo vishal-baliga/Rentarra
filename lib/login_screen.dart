@@ -140,10 +140,24 @@ class _LoginScreenState extends State<LoginScreen> {
       print('🔎 Role from Firestore: $role');
 
       if (role == 'renter') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RenterDashboard()),
-        );
+        final onboardingDoc = await FirebaseFirestore.instance
+            .collection('renterOnboarding')
+            .doc(user.uid)
+            .get();
+
+        final onboardingComplete = onboardingDoc.data()?['onboardingComplete'] == true;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('onboardingComplete', onboardingComplete);
+
+        if (onboardingComplete) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RenterDashboard()),
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
       } else if (role == 'landlord') {
         Navigator.pushReplacement(
           context,
@@ -192,6 +206,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextButton(
                       onPressed: _resetOnboarding,
                       child: const Text('Reset Onboarding'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('onboardingComplete');
+                        print('🚪 Dev Logout: signed out and cleared onboarding flag');
+                        setState(() {
+                          _emailController.clear();
+                          _passwordController.clear();
+                          _emailExists = false;
+                          _error = null;
+                        });
+                      },
+                      child: const Text('Dev Logout'),
                     ),
                   ],
                 ),
