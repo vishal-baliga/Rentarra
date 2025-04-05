@@ -42,7 +42,8 @@ jobs:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTARRA_83520 }}"
           projectId: rentarra-83520
-          channelId: ${{ github.ref == 'refs/heads/main' && 'live' || (github.ref == 'refs/heads/staging' && 'staging') || format('pr-{0}', github.event.pull_request.number) }}
+          # Channel ID should be 'live' for main branch and 'staging' for staging branch
+          channelId: ${{ github.ref == 'refs/heads/main' && 'live' || 'staging' }}
 
       - name: ✅ Post Deploy Info
         run: echo "🔥 Deployed to Firebase Hosting"
