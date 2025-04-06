@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'dashboards.dart';
-import 'renter_onboarding_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   final String? prefilledEmail;
@@ -26,10 +25,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _loading = false;
   String? _error;
 
+  Map<String, dynamic>? _onboardingData;
+
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.prefilledEmail ?? '');
+
+    // Capture onboarding data from arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        setState(() {
+          _onboardingData = args;
+        });
+      }
+    });
   }
 
   Future<void> _signUp() async {
@@ -39,36 +50,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      // Create user with FirebaseAuth
       final credential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Create user document in Firestore
-      await _firestore.collection('users').doc(credential.user!.uid).set({
+      final uid = credential.user!.uid;
+
+      // Create user document
+      await _firestore.collection('users').doc(uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'role': _role,
         'createdAt': FieldValue.serverTimestamp(),
-        'onboardingComplete': false, // Keep onboarding status false initially
+        'onboardingComplete': true,
       });
 
-      // Show success message
+      // Save onboarding data if renter
+      if (_role.toLowerCase() == 'renter' && _onboardingData != null) {
+        _onboardingData!['userID'] = uid;
+        _onboardingData!['submittedAt'] = FieldValue.serverTimestamp();
+        _onboardingData!['onboardingComplete'] = true;
+
+        await _firestore
+            .collection('renterOnboarding')
+            .doc(uid)
+            .set(_onboardingData!, SetOptions(merge: true));
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up successful ✅")),
       );
 
-      // Navigate to onboarding screen if Renter
+      // Route based on role
       if (_role.toLowerCase() == 'renter') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const RenterOnboardingScreen()),
+          MaterialPageRoute(builder: (_) => const RenterDashboard()),
         );
       } else {
-        // Navigate to Landlord Dashboard for landlords
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LandlordDashboard()),
@@ -77,6 +99,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on FirebaseAuthException catch (e) {
       setState(() {
         _error = e.message ?? "Something went wrong.";
+      });
+    } catch (e) {
+      setState(() {
+        _error = "Unexpected error: $e";
       });
     } finally {
       setState(() {

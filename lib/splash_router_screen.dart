@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 import 'firebase_options.dart';
 import 'login_screen.dart';
-import 'renter_onboarding_screen.dart';
-import 'dashboards.dart'; // Replace this with your actual Dashboard screen
+import 'renter_onboarding_screen.dart'; // ✅ Correct file and class
 
 class SplashRouterScreen extends StatefulWidget {
   const SplashRouterScreen({super.key});
@@ -25,56 +22,18 @@ class _SplashRouterScreenState extends State<SplashRouterScreen> {
 
   Future<void> _routeUser() async {
     try {
-      // 🛡 Ensure Firebase is ready
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
       print('✅ Firebase initialized in SplashRouter');
 
-      // 🧪 Dev-only force logout & onboarding reset
-      const isDev = bool.fromEnvironment('dart.vm.product') == false;
-      if (isDev) {
-        await FirebaseAuth.instance.signOut();
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('onboardingComplete');
-        print('🧹 Dev-only logout + onboarding flag cleared');
-      }
+      await Future.delayed(const Duration(seconds: 3));
 
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        // If user is not logged in, go to the Login Screen
-        _goTo(const LoginScreen());
-        return;
-      }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      final role = userDoc.data()?['role']?.toString().toLowerCase() ?? 'renter';
-      final firestoreFlag = userDoc.data()?['onboardingComplete'] ?? false;
-
-      // Shared preferences to check onboarding status
-      final prefs = await SharedPreferences.getInstance();
-      final localFlag = prefs.getBool('onboardingComplete');
-      final onboardingComplete = localFlag ?? firestoreFlag;
-
-      if (role == 'landlord') {
-        // If the user is a landlord, go to the Landlord Dashboard
-        _goTo(const LandlordDashboard());
-      } else if (onboardingComplete) {
-        // If onboarding is completed, go to the Renter Dashboard
-        _goTo(const RenterDashboard());
-      } else {
-        // If onboarding isn't completed, go to the Renter Onboarding Screen
-        _goTo(const RenterOnboardingScreen());
-      }
+      // Always go to onboarding (fresh flow)
+      _goTo(const RenterOnboardingScreen());
     } catch (e, stack) {
       print('🚨 Splash router error: $e');
       print(stack);
-      // In case of error, navigate to the Login Screen
       _goTo(const LoginScreen());
     }
   }
@@ -89,14 +48,18 @@ class _SplashRouterScreenState extends State<SplashRouterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text("Loading Rentarra...", style: TextStyle(fontSize: 16)),
+          children: const [
+            SpinKitCircle(color: Colors.teal, size: 100.0),
+            SizedBox(height: 20),
+            Text(
+              "Loading Rentarra...",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),

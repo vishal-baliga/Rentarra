@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboards.dart';
 import 'signup_screen.dart';
-import 'renter_onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,38 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _checkingEmail = false;
   String? _error;
 
-  // Check if the user is already logged in
-  Future<void> _checkLoginStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final role = userDoc.data()?['role']?.toString().toLowerCase() ?? 'renter';
-      final onboardingComplete = userDoc.data()?['onboardingComplete'] ?? false;
-
-      if (role == 'renter') {
-        if (onboardingComplete) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const RenterDashboard()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const RenterOnboardingScreen()),
-          );
-        }
-      } else if (role == 'landlord') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LandlordDashboard()),
-        );
-      }
-    }
-  }
-
   Future<void> _checkEmailExists() async {
-    print('🛠️ Checking if email exists...');
-
     setState(() {
       _checkingEmail = true;
       _error = null;
@@ -116,16 +83,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
-          .where('email', isEqualTo: user.email)
-          .limit(1)
+          .doc(user.uid)
           .get();
 
-      if (snapshot.docs.isEmpty) {
+      if (!snapshot.exists) {
         setState(() => _error = "User record not found.");
         return;
       }
 
-      final role = snapshot.docs.first.data()['role']?.toLowerCase();
+      final role = snapshot.data()?['role']?.toLowerCase();
 
       if (role == 'renter') {
         final onboardingDoc = await FirebaseFirestore.instance
@@ -164,12 +130,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _loading = false;
       });
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
   }
 
   @override
